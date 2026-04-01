@@ -1,0 +1,9 @@
+{
+  "name": "Laundry Tracker",
+  "short_name": "Laundry",
+  "start_url": "/wardrobe",
+  "display": "standalone",
+  "background_color": "#13131f",
+  "theme_color": "#13131f",
+  "icons": []
+}
