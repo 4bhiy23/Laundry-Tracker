@@ -31,28 +31,28 @@ export default function GiveLaundrySheet({ isOpen, onClose, selectedItems, onSuc
     try {
       setIsSubmitting(true);
       
-      // Update each item in parallel
-      await Promise.all(
-        selectedItems.map((item) =>
-          fetch(`/api/clothes/${item._id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              status: "laundry",
-              expectedReturnDate: new Date(expectedDate).toISOString(),
-            }),
-          })
-        )
-      );
+      const response = await fetch("/api/laundry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clothes: selectedItems.map(item => item._id),
+          expectedReturnDate: new Date(expectedDate).toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => null);
+        throw new Error(err?.details || err?.error || "Failed to create laundry bag");
+      }
 
       toast.success(`Sent ${selectedItems.length} items to laundry!`);
       onSuccess();
       onClose();
       router.refresh();
-      
-    } catch (error) {
+
+    } catch (error: any) {
       console.error(error);
-      toast.error("Failed to update status");
+      toast.error(error.message || "Failed to update status");
     } finally {
       setIsSubmitting(false);
     }
@@ -100,7 +100,7 @@ export default function GiveLaundrySheet({ isOpen, onClose, selectedItems, onSuc
               <div className="flex gap-3 overflow-x-auto pb-2 snap-x hide-scrollbar -mx-6 px-6">
                 {selectedItems.map((item) => (
                   <div key={item._id} className="relative w-24 h-24 shrink-0 rounded-xl overflow-hidden snap-start shadow-sm outline outline-1 outline-[#3b3b5c]">
-                    <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
+                    <Image src={item.imageUrl} alt={item.name} fill sizes="96px" className="object-cover" />
                   </div>
                 ))}
               </div>

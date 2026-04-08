@@ -6,11 +6,39 @@ import { type ClothingItem } from "@/types";
 import { Icons } from "@/components/ui/icons";
 import { Spinner } from "@/components/ui/Spinner";
 import toast from "react-hot-toast";
+import { type LaundryBagItem } from "@/types";
+import Link from "next/link";
 
 export default function LaundryPage() {
+  const [bags, setBags] = useState<LaundryBagItem[]>([]);
+
+  const fetchHistory = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/laundry");
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      setBags(data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load laundry history");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+  
+  
+  
+  
   const [items, setItems] = useState<ClothingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const currentBag = bags.find((b) => b.status === "pending");
 
   const fetchLaundry = async () => {
     try {
@@ -30,7 +58,13 @@ export default function LaundryPage() {
   useEffect(() => {
     fetchLaundry();
   }, []);
-
+    const getStatusColor = (status: string) => {
+    switch (status) {
+      case "returned": return "text-green-400 bg-green-400/20";
+      case "late": return "text-red-400 bg-red-400/20";
+      default: return "text-amber-400 bg-amber-400/20";
+    }
+  };
   const handleReturnToWardrobe = async (id: string, name: string) => {
     try {
       setUpdatingId(id);
@@ -64,6 +98,7 @@ export default function LaundryPage() {
         <p className="text-sm text-[#9191b0] mt-0.5">
           {items.length} {items.length === 1 ? 'item' : 'items'} currently washing
         </p>
+        <Link href="/laundry/history"><button className="text-sm text-[#9191b0] mt-0.5">History</button></Link>
       </div>
 
       {/* Grid */}
@@ -73,7 +108,7 @@ export default function LaundryPage() {
             <div key={i} className="aspect-[3/4] skeleton rounded-2xl w-full" />
           ))}
         </div>
-      ) : items.length === 0 ? (
+      ) : bags.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center px-4 mt-20">
           <div className="w-20 h-20 rounded-full glass flex items-center justify-center mb-4 text-[#3b3b5c]">
             <Icons.Check className="w-10 h-10 opacity-50" />
@@ -91,25 +126,53 @@ export default function LaundryPage() {
                 item={item}
                 mode="laundry"
               />
-              {/* Return Button Overlay */}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl flex flex-col items-center justify-center p-4">
-                <button
-                  onClick={() => handleReturnToWardrobe(item._id, item.name)}
-                  disabled={updatingId === item._id}
-                  className="w-full py-3 rounded-xl font-medium text-white shadow-lg active:scale-95 flex items-center justify-center gap-2 bg-[#1e1e2e]/90 backdrop-blur"
-                >
-                  {updatingId === item._id ? (
-                    <Spinner className="w-5 h-5" />
-                  ) : (
-                    <>
-                      <Icons.Wardrobe className="w-5 h-5" />
-                      <span>Returned</span>
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
+        //  <div className="space-y-4 px-2">
+        //   {bags.map((bag) => (
+        //     <Link key={bag._id} href={`/laundry/${bag._id}`}>
+        //       <div className="bg-[#2a2a3e] p-4 rounded-2xl flex items-center justify-between shadow-sm active:scale-[0.98] transition-transform cursor-pointer border border-transparent hover:border-[#3b3b5c]">
+        //         <div>
+        //           <h3 className="text-white font-medium text-lg mb-1">
+        //             {new Date(bag.takenDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+        //           </h3>
+        //           <p className="text-[#9191b0] text-sm">
+        //             {bag.clothes.length} items
+        //           </p>
+        //         </div>
+        //         <div className="flex flex-col items-end gap-2">
+        //           <span className={`px-2 py-1 rounded text-xs font-semibold capitalize tracking-wide ${getStatusColor(bag.status)}`}>
+        //             {bag.status}
+        //           </span>
+        //           <Icons.Check className="w-5 h-5 text-[#9191b0] opacity-50 rotate-[225deg]" /> {/* Roughly chevron right */}
+        //         </div>
+        //       </div>
+        //     </Link>
           ))}
+          
+        </div>
+      )}
+
+      {/* Action Button for Current Bag */}
+      {currentBag && items.length > 0 && (
+        <div className="fixed bottom-[90px] left-0 right-0 px-4 bg-gradient-to-t from-[#13131f] via-[#13131f]/90 to-transparent pt-12 pb-4 z-20 flex justify-center pointer-events-none">
+          <button 
+            onClick={async () => {
+              try {
+                const res = await fetch(`/api/laundry/${currentBag._id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'returned' }) });
+                if (!res.ok) throw new Error("Failed to mark returned");
+                toast.success("Laundry marked as returned!");
+                // Refresh data
+                fetchHistory();
+                fetchLaundry();
+              } catch (e) {
+                toast.error("Failed to return bag");
+              }
+            }}
+            className="w-full max-w-[300px] pointer-events-auto bg-white/10 backdrop-blur-md border border-white/20 text-white px-6 py-4 rounded-3xl font-semibold shadow-xl shadow-black/20 active:scale-95 transition-all text-center flex items-center justify-center gap-2"
+          >
+            <Icons.Check className="w-5 h-5" />
+            Mark All as Returned
+          </button>
         </div>
       )}
     </div>

@@ -26,6 +26,7 @@ export default function ClothingCard({
 }: ClothingCardProps) {
   
   const handleClick = () => {
+    if (item.isInLaundry && mode === "wardrobe") return;
     if (selectable && onSelect) {
       onSelect();
     } else if (onClick) {
@@ -41,11 +42,11 @@ export default function ClothingCard({
   return (
     <motion.div 
       layoutId={`card-${item._id}`}
-      whileTap={{ scale: 0.96 }}
+      whileTap={{ scale: (item.isInLaundry && mode === "wardrobe") ? 1 : 0.96 }}
       onClick={handleClick}
       className={`relative w-full aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer group bg-[#2a2a3e] border-2 transition-colors ${
         selected ? "border-[#6366f1]" : "border-transparent"
-      }`}
+      } ${(item.isInLaundry && mode === "wardrobe") ? "grayscale opacity-70 cursor-not-allowed" : ""}`}
     >
       {/* Image */}
       <div className="absolute inset-0">

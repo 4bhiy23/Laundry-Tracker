@@ -19,6 +19,8 @@ export interface IClothing extends Document {
   color?: string;
   status: ClothingStatus;
   expectedReturnDate?: Date;
+  isInLaundry: boolean;
+  currentLaundryBag?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +39,8 @@ const ClothingSchema = new Schema<IClothing>(
     color: { type: String, trim: true },
     status: { type: String, enum: ["wardrobe", "laundry"], default: "wardrobe" },
     expectedReturnDate: { type: Date },
+    isInLaundry: { type: Boolean, default: false },
+    currentLaundryBag: { type: Schema.Types.ObjectId, ref: "LaundryBag" },
   },
   { timestamps: true }
 );
